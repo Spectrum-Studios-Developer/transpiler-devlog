@@ -1,3 +1,12 @@
+'''
+    Code Rules:
+        - Classes: PascalCase
+        - Functions: snake_case
+        - Global Storage: snake_case
+        - Local Storage: camelCase
+        - Indentation: 4 spaces
+'''
+
 import tokenizer
 import os
 
@@ -31,16 +40,14 @@ class Generator:
         tokens = tokenizer.getTokens(fileName)
         depth_index = 0
         skip_next = 0
-        for token in tokens:
-            if skip_next > 0:
+        for i, token in enumerate(tokens):
+            if skip_next > 0: # if we need to skip iterations of the loop to account for multi-token expressions:
                 skip_next -= 1
                 continue
-
-            if token == "console":
-                print("Found console")
-                print(tokens[tokens.index(token) + 1])
-                print(tokens[tokens.index(token) + 2])
-                if tokens[tokens.index(token) + 1] == "." and tokens[tokens.index(token) + 2] == "log":
+            
+            # handle multi-token expressions first:
+            if token == "console": 
+                if tokens[i+1] == "." and tokens[i+2] == "log":
                     FileUtils.append_to_file("out.py", Generator.tokenDefinitions["console.log"])
                     skip_next = 2
                     continue
