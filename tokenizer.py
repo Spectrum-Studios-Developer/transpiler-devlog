@@ -1,25 +1,19 @@
 import re
 
 index = 0
-fileName = input(" > ")
 
 TOKEN_RE = re.compile(r"""
     [A-Za-z_]\w* |   
     \d+ |            
     ==|!=|<=|>= |    
-    [+\-*/=(){};,]   
+    [+\-*/=(){};,.]   
 """, re.VERBOSE)
-def getTokens():
-    data = ''.join(getFileContents())
-    parts = data.split(';')
-    return [line for part in parts for line in part.splitlines() if line.strip()]
+def getTokens(f):
+    code = ''.join(getFileContents(f))
+    return TOKEN_RE.findall(code)      
 
-def getFileContents():
-    with open(fileName, "r") as f:
+def getFileContents(f):
+    if not f:
+        return
+    with open(f, "r") as f:
         return f.read()
-
-def main():
-    print(getTokens())
-
-if __name__ == '__main__':
-    main()
