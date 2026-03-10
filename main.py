@@ -15,7 +15,7 @@ fileName = input(" > ")
 class FileUtils:
     file_path = os.path.join(os.getcwd(), "build", "out.py")
     @staticmethod
-    def append_to_file(file, content):
+    def append_to_file(content):
         if not os.path.exists(FileUtils.file_path):
             os.makedirs(os.path.dirname(FileUtils.file_path), exist_ok=True)
             with open(FileUtils.file_path, "w") as f:
@@ -48,21 +48,21 @@ class Generator:
             # handle multi-token expressions first:
             if token == "console": 
                 if tokens[i+1] == "." and tokens[i+2] == "log":
-                    FileUtils.append_to_file("out.py", Generator.tokenDefinitions["console.log"])
+                    FileUtils.append_to_file(Generator.tokenDefinitions["console.log"])
                     skip_next = 2
                     continue
 
             if token in Generator.tokenDefinitions: # if the token is specified in the token definitions:
                 if token == "{":
                     depth_index += 1
-                    FileUtils.append_to_file("out.py", Generator.tokenDefinitions[token] + "    " * depth_index)
+                    FileUtils.append_to_file(Generator.tokenDefinitions[token] + "    " * depth_index)
                 elif token == "}":
                     depth_index -= 1
-                    FileUtils.append_to_file("out.py", Generator.tokenDefinitions[token])
+                    FileUtils.append_to_file(Generator.tokenDefinitions[token])
                 else:
-                    FileUtils.append_to_file("out.py", Generator.tokenDefinitions[token])
+                    FileUtils.append_to_file(Generator.tokenDefinitions[token])
             else:
-                FileUtils.append_to_file("out.py", token)
+                FileUtils.append_to_file(token)
 
 if __name__ == "__main__":
     Generator.generate()
