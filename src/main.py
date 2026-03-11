@@ -20,7 +20,7 @@ class FileUtils:
     def init():
         os.makedirs(os.path.dirname(build_path), exist_ok=True)
         with open(build_path, "w") as f:
-            f.write("exit_code = 0\n")
+            f.write("")
 
     @staticmethod
     def append_to_file(content):
@@ -30,7 +30,7 @@ class FileUtils:
 class Generator:
     def __init__(self):
         self.out = []
-        self.indent = 0
+        self.indent = 1
 
     def emit(self, line):
         self.out.append(("    " * self.indent) + line)
@@ -42,7 +42,11 @@ class Generator:
         self.indent -= 1
 
     def build(self):
+        FileUtils.append_to_file("import sys\n\n")
+        FileUtils.append_to_file("exit_code = 0\n")
+        FileUtils.append_to_file("def __program__():\n")
         FileUtils.append_to_file(''.join(self.out))
+        FileUtils.append_to_file("\n__program__()")
 
 if __name__ == "__main__":
     FileUtils.init()

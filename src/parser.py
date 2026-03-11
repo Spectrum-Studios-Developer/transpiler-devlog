@@ -5,7 +5,7 @@ class Exit:
     def __init__(self, exprType):
         self.exprType = exprType
 
-class Func:
+class DefFunc:
     def __init__(self, name, parameters, body):
         self.name = name
         self.parameters = parameters
@@ -19,6 +19,11 @@ class Let:
 class Return:
     def __init__(self, value):
         self.value = value
+
+class Call:
+    def __init__(self, name, parameters):
+        self.name = name
+        self.parameters = parameters
 
 # Expression Classes
 class NumberExpr:
@@ -68,7 +73,7 @@ class Stmt:
 
             self.generator.emit(f"{name} = {value}\n")
 
-        if isinstance(self.node, Func):
+        if isinstance(self.node, DefFunc):
             name = self.node.name
             params = ', '.join(self.node.parameters)
             self.generator.emit(f"def {name}({params}):\n")
@@ -91,6 +96,11 @@ class Stmt:
         if isinstance(self.node, Return):
             value = Stmt.get_expr_value(self.node.value)
             self.generator.emit(f"return {value}\n")
+
+        if isinstance(self.node, Call):
+            name = self.node.name
+            params = ', '.join([Stmt.get_expr_value(param) for param in self.node.parameters])
+            self.generator.emit(f"{name}({params})\n")
 
 # Main parser class
 class Parser:
@@ -136,6 +146,8 @@ class Parser:
             return self.parse_func()
         if token == "return":
             return self.parse_return()
+        if token == "call":
+            return self.parse_call()
 
         raise SyntaxError(f"Unknown statement: {token}")
 
@@ -215,7 +227,7 @@ class Parser:
         
         self.consume("}")
 
-        return Func(name, parameters, body)
+        return DefFunc(name, parameters, body)
     
     def parse_let(self):
         self.consume("let")
@@ -238,3 +250,24 @@ class Parser:
         self.consume(";")
 
         return Return(value)
+    
+    def parse_call(self):
+        self.consume("call")
+
+        name = self.advance()
+
+        parameters = []
+
+        self.consume("(")
+
+        if self.peek() != ")":
+             parameters.append(self.parse_expression())
+
+             while self.peek() == ",":
+                self.consume(",")
+                parameters.append(self.parse_expression())   
+        self.consume(")")
+
+        self.consume(";")
+
+        return Call(name, parameters)

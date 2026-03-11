@@ -1,5 +1,5 @@
-func testFunction(x) {
-    return x;
+func test(a) {
+    exit a;
 }
 
-exit testFunction("aasdghewi as");
+call test(2);
