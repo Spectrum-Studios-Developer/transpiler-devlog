@@ -1,12 +1,12 @@
 import re
 
 TOKEN_RE = re.compile(r"""
-    \s+ |                  # whitespace (ignore)
-    [A-Za-z_]\w* |         # identifiers
-    \d+ |                  # numbers
-    ==|!=|<=|>= |          # multi-char ops
-    "[^"]*"|'[^']*' |      # string literals
-    [+\-*"'/=(){};,.]      # single-char tokens
+    \s+ |                 
+    [A-Za-z_]\w* |         
+    \d+ |                  
+    ==|!=|<=|>= |          
+    "[^"]*"|'[^']*' |      
+    [+\-*"'/=(){};,.]      
 """, re.VERBOSE)
 
 def getTokens(f):

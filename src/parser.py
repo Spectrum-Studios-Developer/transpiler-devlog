@@ -15,6 +15,10 @@ class Let:
     def __init__(self, name, value):
         self.name = name
         self.value = value
+    
+class Return:
+    def __init__(self, value):
+        self.value = value
 
 # Expression Classes
 class NumberExpr:
@@ -28,6 +32,11 @@ class StringExpr:
 class VariableExpr:
     def __init__(self, name):
         self.name = name
+
+class CallExpr:
+    def __init__ (self, name, parameters):
+        self.name = name
+        self.parameters = parameters
 
 # Statemnt Handler
 class Stmt:
@@ -43,21 +52,14 @@ class Stmt:
             return expr.value
         elif isinstance(expr, VariableExpr):
             return expr.name
+        elif isinstance(expr, CallExpr):
+            params = ', '.join([Stmt.get_expr_value(param) for param in expr.parameters])
+            return expr.name + "(" + params + ")"
         else:
             raise Exception("Unsupported expression type")
 
-    def push(self):
-        if isinstance(self.node, Exit):
-            if self.node.exprType is None:
-                self.generator.emit('print(f"Exited with code {repr(exit_code)}")\n')
-                return
-
-            expr = self.node.exprType
-            value = Stmt.get_expr_value(expr)
-
-            self.generator.emit(f"exit_code = {value}\n")
-            self.generator.emit("print(f'Exited with code {repr(exit_code)}')\n")
-        
+    def push(self): # This is where we handle the code generation for each statement
+        # Declarative Statements
         if isinstance(self.node, Let):
             name = self.node.name
             expr = self.node.value
@@ -77,6 +79,18 @@ class Stmt:
                 node.push()
 
             self.generator.indent_pop()
+        
+        # Control Flow Statements
+        if isinstance(self.node, Exit):
+            expr = self.node.exprType
+            value = Stmt.get_expr_value(expr)
+
+            self.generator.emit(f"exit_code = {value}\n")
+            self.generator.emit("print(f'Exited with code {repr(exit_code)}')\n")
+        
+        if isinstance(self.node, Return):
+            value = Stmt.get_expr_value(self.node.value)
+            self.generator.emit(f"return {value}\n")
 
 # Main parser class
 class Parser:
@@ -120,12 +134,21 @@ class Parser:
 
         if token == "func":
             return self.parse_func()
+        if token == "return":
+            return self.parse_return()
 
         raise SyntaxError(f"Unknown statement: {token}")
 
     # Parse Expr
     def parse_expression(self):
         token = self.peek()
+
+        if token == "(":
+            self.consume("(")
+            expr = self.parse_expression()
+            self.consume(")")
+            print("Compiler Warning: Grouped expressions are ignored; consider removing parentheses?")
+            return expr
 
         if token.isdigit():
             self.advance()
@@ -137,6 +160,21 @@ class Parser:
         
         if token.isidentifier():
             name = self.advance()
+
+            if self.peek() == "(":
+                self.consume("(")
+
+                parameters = []
+
+                if self.peek() != ")":
+                    parameters.append(self.parse_expression())
+
+                    while self.peek() == ",":
+                        self.consume(",")
+                        parameters.append(self.parse_expression())
+                
+                self.consume(")")
+                return CallExpr(name, parameters)
             return VariableExpr(name)
 
         raise SyntaxError(f"Unknown expression: {token}")
@@ -144,11 +182,9 @@ class Parser:
     # Parsing individual statements
     def parse_exit(self):
         self.consume("exit")
-        self.consume("(")
 
         value = self.parse_expression()
 
-        self.consume(")")
         self.consume(";")
 
         return Exit(value)
@@ -193,3 +229,12 @@ class Parser:
         self.consume(";")
 
         return Let(name, value)
+    
+    def parse_return(self):
+        self.consume("return")
+
+        value = self.parse_expression()
+
+        self.consume(";")
+
+        return Return(value)

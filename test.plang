@@ -1,7 +1,5 @@
-func testFunction(x,y) {
-    exit(x);
+func testFunction(x) {
+    return x;
 }
 
-let x = 5123;
-
-exit(x);
+exit testFunction("aasdghewi as");
