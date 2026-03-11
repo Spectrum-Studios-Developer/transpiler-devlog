@@ -1,17 +1,17 @@
 import re
 
 TOKEN_RE = re.compile(r"""
-    \s+ |            # whitespace (we gonna ignore dis)
-    [A-Za-z_]\w* |   # identifiers
-    \d+ |            # numbers
-    ==|!=|<=|>= |    # multi-char ops
-    [+\-*"'/=(){};,.]   # single-char tokens
+    \s+ |                  # whitespace (ignore)
+    [A-Za-z_]\w* |         # identifiers
+    \d+ |                  # numbers
+    ==|!=|<=|>= |          # multi-char ops
+    "[^"]*"|'[^']*' |      # string literals
+    [+\-*"'/=(){};,.]      # single-char tokens
 """, re.VERBOSE)
 
 def getTokens(f):
-    code = ''.join(getFileContents(f))
-    tokens = TOKEN_RE.findall(code)
-    print(tokens)
+    code = getFileContents(f)
+    tokens = [t for t in TOKEN_RE.findall(code) if not t.strip() == '']
     return tokens
 
 def getFileContents(path):

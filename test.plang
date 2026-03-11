@@ -1,1 +1,7 @@
-exit(1);
+func testFunction(x,y) {
+    exit(x);
+}
+
+let x = 5123;
+
+exit(x);

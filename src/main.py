@@ -30,9 +30,16 @@ class FileUtils:
 class Generator:
     def __init__(self):
         self.out = []
+        self.indent = 0
 
     def emit(self, line):
-        self.out.append(line)
+        self.out.append(("    " * self.indent) + line)
+
+    def indent_push(self):
+        self.indent += 1
+    
+    def indent_pop(self):
+        self.indent -= 1
 
     def build(self):
         FileUtils.append_to_file(''.join(self.out))
