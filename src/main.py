@@ -8,7 +8,7 @@
 '''
 
 import tokenizer
-import parser
+import parser.parser as parser
 
 import os
 import sys
@@ -42,8 +42,7 @@ class Generator:
         self.indent -= 1
 
     def build(self):
-        FileUtils.append_to_file("import sys\n\n")
-        FileUtils.append_to_file("exit_code = 0\n")
+        FileUtils.append_to_file("exit_code = 0\n\n")
         FileUtils.append_to_file("def __program__():\n")
         FileUtils.append_to_file(''.join(self.out))
         FileUtils.append_to_file("\n__program__()")

@@ -38,6 +38,13 @@ class VariableExpr:
     def __init__(self, name):
         self.name = name
 
+class BinaryopExpr:
+    BINARY_OPERATORS = {"+", "-", "*", "/", "=="}
+    def __init__(self, left, operator, right):
+        self.left = left
+        self.operator = operator
+        self.right = right
+
 class CallExpr:
     def __init__ (self, name, parameters):
         self.name = name
@@ -57,6 +64,10 @@ class Stmt:
             return expr.value
         elif isinstance(expr, VariableExpr):
             return expr.name
+        elif isinstance(expr, BinaryopExpr):
+            left = Stmt.get_expr_value(expr.left)
+            right = Stmt.get_expr_value(expr.right)
+            return f"{left} {expr.operator} {right}"
         elif isinstance(expr, CallExpr):
             params = ', '.join([Stmt.get_expr_value(param) for param in expr.parameters])
             return expr.name + "(" + params + ")"
@@ -138,10 +149,8 @@ class Parser:
 
         if token == "exit":
             return self.parse_exit()
-        
         if token == "let":
             return self.parse_let()
-
         if token == "func":
             return self.parse_func()
         if token == "return":
@@ -152,12 +161,22 @@ class Parser:
         raise SyntaxError(f"Unknown statement: {token}")
 
     # Parse Expr
-    def parse_expression(self):
+    def parse_expr(self):
+        left = self.parse_primary()
+
+        while self.peek() in BinaryopExpr.BINARY_OPERATORS:
+            operator = self.advance()
+            right = self.parse_primary()
+            left = BinaryopExpr(left, operator, right)
+
+        return left
+
+    def parse_primary(self):
         token = self.peek()
 
         if token == "(":
             self.consume("(")
-            expr = self.parse_expression()
+            expr = self.parse_expr()
             self.consume(")")
             print("Compiler Warning: Grouped expressions are ignored; consider removing parentheses?")
             return expr
@@ -179,11 +198,11 @@ class Parser:
                 parameters = []
 
                 if self.peek() != ")":
-                    parameters.append(self.parse_expression())
+                    parameters.append(self.parse_expr())
 
                     while self.peek() == ",":
                         self.consume(",")
-                        parameters.append(self.parse_expression())
+                        parameters.append(self.parse_expr())
                 
                 self.consume(")")
                 return CallExpr(name, parameters)
@@ -195,7 +214,7 @@ class Parser:
     def parse_exit(self):
         self.consume("exit")
 
-        value = self.parse_expression()
+        value = self.parse_expr()
 
         self.consume(";")
 
@@ -236,7 +255,7 @@ class Parser:
 
         self.consume("=")
 
-        value = self.parse_expression()
+        value = self.parse_expr()
 
         self.consume(";")
 
@@ -245,7 +264,7 @@ class Parser:
     def parse_return(self):
         self.consume("return")
 
-        value = self.parse_expression()
+        value = self.parse_expr()
 
         self.consume(";")
 
@@ -261,11 +280,11 @@ class Parser:
         self.consume("(")
 
         if self.peek() != ")":
-             parameters.append(self.parse_expression())
+             parameters.append(self.parse_expr())
 
              while self.peek() == ",":
                 self.consume(",")
-                parameters.append(self.parse_expression())   
+                parameters.append(self.parse_expr())   
         self.consume(")")
 
         self.consume(";")
