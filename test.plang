@@ -1,5 +1,10 @@
-func test(a) {
-    exit a;
+func a(a) {
+    if (a == 2) {
+        log "It is 2";
+        exit 0;
+    }
+    log "It is not 2";
+    exit 1;
 }
 
-call test(2 + 2);
+call a(3);

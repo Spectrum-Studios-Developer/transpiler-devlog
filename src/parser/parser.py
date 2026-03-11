@@ -1,54 +1,6 @@
 import main
-
-# Stmt Classes
-class Exit:
-    def __init__(self, exprType):
-        self.exprType = exprType
-
-class DefFunc:
-    def __init__(self, name, parameters, body):
-        self.name = name
-        self.parameters = parameters
-        self.body = body
-
-class Let:
-    def __init__(self, name, value):
-        self.name = name
-        self.value = value
-    
-class Return:
-    def __init__(self, value):
-        self.value = value
-
-class Call:
-    def __init__(self, name, parameters):
-        self.name = name
-        self.parameters = parameters
-
-# Expression Classes
-class NumberExpr:
-    def __init__(self, value):
-        self.value = value
-
-class StringExpr:
-    def __init__(self, value):
-        self.value = value
-
-class VariableExpr:
-    def __init__(self, name):
-        self.name = name
-
-class BinaryopExpr:
-    BINARY_OPERATORS = {"+", "-", "*", "/", "=="}
-    def __init__(self, left, operator, right):
-        self.left = left
-        self.operator = operator
-        self.right = right
-
-class CallExpr:
-    def __init__ (self, name, parameters):
-        self.name = name
-        self.parameters = parameters
+from . import expressions
+from . import statements
 
 # Statemnt Handler
 class Stmt:
@@ -58,17 +10,17 @@ class Stmt:
 
     @staticmethod
     def get_expr_value(expr):
-        if isinstance(expr, StringExpr):
+        if isinstance(expr, expressions.StringExpr):
             return f'"{expr.value}"'
-        elif isinstance(expr, NumberExpr):
+        elif isinstance(expr, expressions.NumberExpr):
             return expr.value
-        elif isinstance(expr, VariableExpr):
+        elif isinstance(expr, expressions.VariableExpr):
             return expr.name
-        elif isinstance(expr, BinaryopExpr):
+        elif isinstance(expr, expressions.BinaryopExpr):
             left = Stmt.get_expr_value(expr.left)
             right = Stmt.get_expr_value(expr.right)
             return f"{left} {expr.operator} {right}"
-        elif isinstance(expr, CallExpr):
+        elif isinstance(expr, expressions.CallExpr):
             params = ', '.join([Stmt.get_expr_value(param) for param in expr.parameters])
             return expr.name + "(" + params + ")"
         else:
@@ -76,7 +28,7 @@ class Stmt:
 
     def push(self): # This is where we handle the code generation for each statement
         # Declarative Statements
-        if isinstance(self.node, Let):
+        if isinstance(self.node, statements.Let):
             name = self.node.name
             expr = self.node.value
 
@@ -84,7 +36,7 @@ class Stmt:
 
             self.generator.emit(f"{name} = {value}\n")
 
-        if isinstance(self.node, DefFunc):
+        if isinstance(self.node, statements.DefFunc):
             name = self.node.name
             params = ', '.join(self.node.parameters)
             self.generator.emit(f"def {name}({params}):\n")
@@ -97,21 +49,36 @@ class Stmt:
             self.generator.indent_pop()
         
         # Control Flow Statements
-        if isinstance(self.node, Exit):
+        if isinstance(self.node, statements.Exit):
             expr = self.node.exprType
             value = Stmt.get_expr_value(expr)
 
             self.generator.emit(f"exit_code = {value}\n")
             self.generator.emit("print(f'Exited with code {repr(exit_code)}')\n")
+            self.generator.emit("sys.exit(exit_code)\n")
         
-        if isinstance(self.node, Return):
+        if isinstance(self.node, statements.Return):
             value = Stmt.get_expr_value(self.node.value)
             self.generator.emit(f"return {value}\n")
 
-        if isinstance(self.node, Call):
+        if isinstance(self.node, statements.Call):
             name = self.node.name
             params = ', '.join([Stmt.get_expr_value(param) for param in self.node.parameters])
             self.generator.emit(f"{name}({params})\n")
+
+        if isinstance(self.node, statements.Log):
+            value = Stmt.get_expr_value(self.node.value)
+            self.generator.emit(f"print({value})\n")
+        if isinstance(self.node, statements.If):
+            condition = Stmt.get_expr_value(self.node.condition)
+            self.generator.emit(f"if {condition}:\n")
+            self.generator.indent_push()
+
+            for stmt in self.node.then_branch:
+                node = Stmt(stmt, self.generator)
+                node.push()
+
+            self.generator.indent_pop()
 
 # Main parser class
 class Parser:
@@ -149,14 +116,18 @@ class Parser:
 
         if token == "exit":
             return self.parse_exit()
-        if token == "let":
+        elif token == "let":
             return self.parse_let()
-        if token == "func":
+        elif token == "func":
             return self.parse_func()
-        if token == "return":
+        elif token == "return":
             return self.parse_return()
-        if token == "call":
+        elif token == "call":
             return self.parse_call()
+        elif token == "log":
+            return self.parse_log()
+        elif token == "if":
+            return self.parse_if()
 
         raise SyntaxError(f"Unknown statement: {token}")
 
@@ -164,10 +135,10 @@ class Parser:
     def parse_expr(self):
         left = self.parse_primary()
 
-        while self.peek() in BinaryopExpr.BINARY_OPERATORS:
+        while self.peek() in expressions.BinaryopExpr.BINARY_OPERATORS:
             operator = self.advance()
             right = self.parse_primary()
-            left = BinaryopExpr(left, operator, right)
+            left = expressions.BinaryopExpr(left, operator, right)
 
         return left
 
@@ -183,11 +154,11 @@ class Parser:
 
         if token.isdigit():
             self.advance()
-            return NumberExpr(token)
+            return expressions.NumberExpr(token)
     
         if token.startswith('"') or token.startswith("'"):
             self.advance()
-            return StringExpr(token[1:-1])
+            return expressions.StringExpr(token[1:-1])
         
         if token.isidentifier():
             name = self.advance()
@@ -205,8 +176,8 @@ class Parser:
                         parameters.append(self.parse_expr())
                 
                 self.consume(")")
-                return CallExpr(name, parameters)
-            return VariableExpr(name)
+                return expressions.CallExpr(name, parameters)
+            return expressions.VariableExpr(name)
 
         raise SyntaxError(f"Unknown expression: {token}")
     
@@ -218,7 +189,7 @@ class Parser:
 
         self.consume(";")
 
-        return Exit(value)
+        return statements.Exit(value)
     
     def parse_func(self):
         self.consume("func")
@@ -246,7 +217,7 @@ class Parser:
         
         self.consume("}")
 
-        return DefFunc(name, parameters, body)
+        return statements.DefFunc(name, parameters, body)
     
     def parse_let(self):
         self.consume("let")
@@ -259,7 +230,7 @@ class Parser:
 
         self.consume(";")
 
-        return Let(name, value)
+        return statements.Let(name, value)
     
     def parse_return(self):
         self.consume("return")
@@ -268,7 +239,7 @@ class Parser:
 
         self.consume(";")
 
-        return Return(value)
+        return statements.Return(value)
     
     def parse_call(self):
         self.consume("call")
@@ -289,4 +260,23 @@ class Parser:
 
         self.consume(";")
 
-        return Call(name, parameters)
+        return statements.Call(name, parameters)
+    
+    def parse_log(self):
+        self.consume("log")
+        value = self.parse_expr()
+        self.consume(";")
+        return statements.Log(value)
+    
+    def parse_if(self):
+        self.consume("if")
+        self.consume("(")
+        condition = self.parse_expr()
+        self.consume(")")
+        self.consume("{")
+
+        then_branch = []
+        while self.peek() != "}":
+            then_branch.append(self.parse_statement())
+        self.consume("}")
+        return statements.If(condition, then_branch)

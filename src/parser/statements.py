@@ -22,3 +22,12 @@ class Call:
     def __init__(self, name, parameters):
         self.name = name
         self.parameters = parameters
+
+class Log:
+    def __init__(self, value):
+        self.value = value
+
+class If:
+    def __init__(self, condition, then_branch):
+        self.condition = condition
+        self.then_branch = then_branch

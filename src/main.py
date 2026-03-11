@@ -42,10 +42,13 @@ class Generator:
         self.indent -= 1
 
     def build(self):
+        FileUtils.append_to_file("import sys\n\n")
         FileUtils.append_to_file("exit_code = 0\n\n")
         FileUtils.append_to_file("def __program__():\n")
         FileUtils.append_to_file(''.join(self.out))
-        FileUtils.append_to_file("\n__program__()")
+        FileUtils.append_to_file("\n__program__()\n")
+        FileUtils.append_to_file("print(f'Exited with code {repr(exit_code)}')\n")
+        FileUtils.append_to_file("sys.exit(exit_code)\n")
 
 if __name__ == "__main__":
     FileUtils.init()
