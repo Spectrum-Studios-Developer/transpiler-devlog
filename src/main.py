@@ -14,8 +14,10 @@ import parser.libraries as libraries
 import os
 import sys
 
-input_path = os.path.join(os.getcwd(), sys.argv[1] if len(sys.argv) > 1 else "input.plang")
-build_path = os.path.join(os.getcwd(), "build", "out.py")
+cwd = os.getcwd()
+base_folder = os.path.basename(cwd)
+input_path = os.path.join(cwd, sys.argv[1] if len(sys.argv) > 1 else "input.plang")
+build_path = os.path.join(cwd, "build", f"{base_folder}.py")
 
 class FileUtils:
     def init():
@@ -59,6 +61,7 @@ if __name__ == "__main__":
     generator = Generator()
 
     depth_index = 0
+    index = 0
     tokens = tokenizer.getTokens(input_path)
 
     parser_module = parser.Parser(tokens)
@@ -68,7 +71,8 @@ if __name__ == "__main__":
     for stmt in program:
         node = parser.Stmt(stmt, generator)
         node.push()
-        print(f"Generated {stmt}")
+        index += 1
+        print(f"[{index}/{len(program)}] Generated {stmt.__class__.__name__} statement")
     
     generator.build()
 

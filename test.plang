@@ -1,0 +1,102 @@
+func R1(n) {
+    if(n == 0) { return 1; }
+    let a = R1(n - 1);
+    let b = R2(n - 1);
+    let c = R3(n - 1);
+    let d = R4(n - 1);
+    let e = R5(n - 1);
+    return a + b * c + d * e + (a + b + c + d + e);
+}
+
+func R2(n) {
+    if(n == 0) { return 2; }
+    let a = R2(n - 1);
+    let b = R3(n - 1);
+    let c = R4(n - 1);
+    let d = R5(n - 1);
+    let e = R1(n - 1);
+    return a * b + c * d + e + (a + b + c + d + e);
+}
+
+func R3(n) {
+    if(n == 0) { return 3; }
+    let a = R3(n - 1);
+    let b = R4(n - 1);
+    let c = R5(n - 1);
+    let d = R1(n - 1);
+    let e = R2(n - 1);
+    return (a + b) * (c + d) + e + (a + b + c + d + e);
+}
+
+func R4(n) {
+    if(n == 0) { return 4; }
+    let a = R4(n - 1);
+    let b = R5(n - 1);
+    let c = R1(n - 1);
+    let d = R2(n - 1);
+    let e = R3(n - 1);
+    return a + b * (c + d) + e + (a + b + c + d + e);
+}
+
+func R5(n) {
+    if(n == 0) { return 5; }
+    let a = R5(n - 1);
+    let b = R1(n - 1);
+    let c = R2(n - 1);
+    let d = R3(n - 1);
+    let e = R4(n - 1);
+    return (a * b) + (c * d) + e + (a + b + c + d + e);
+}
+
+func crazyExpr(x) {
+    let r1 = (((x+1)*(x+2)+((x+3)*(x+4)))*(((x+5)+(x+6))*((x+7)+(x+8))));
+    let r2 = (((x+9)*(x+10)+((x+11)*(x+12)))*(((x+13)+(x+14))*((x+15)+(x+16))));
+    let r3 = (((x+17)*(x+18)+((x+19)*(x+20)))*(((x+21)+(x+22))*((x+23)+(x+24))));
+    let r4 = (((x+25)*(x+26)+((x+27)*(x+28)))*(((x+29)+(x+30))*((x+31)+(x+32))));
+    let r5 = (((x+33)*(x+34)+((x+35)*(x+36)))*(((x+37)+(x+38))*((x+39)+(x+40))));
+    return r1 + r2 + r3 + r4 + r5;
+}
+
+func nestedCalls(x) {
+    let r1 = crazyExpr(crazyExpr(x));
+    let r2 = crazyExpr(crazyExpr(x+1));
+    let r3 = crazyExpr(crazyExpr(x+2));
+    let r4 = crazyExpr(crazyExpr(x+3));
+    let r5 = crazyExpr(crazyExpr(x+4));
+    let r6 = crazyExpr(crazyExpr(x+5));
+    let r7 = crazyExpr(crazyExpr(x+6));
+    let r8 = crazyExpr(crazyExpr(x+7));
+    let r9 = crazyExpr(crazyExpr(x+8));
+    let r10 = crazyExpr(crazyExpr(x+9));
+    return r1 + r2 + r3 + r4 + r5 + r6 + r7 + r8 + r9 + r10;
+}
+
+func main() {
+    let a = 3;
+    let b = 4;
+    let c = 5;
+
+    let t1 = R1(5);
+    log(t1);
+    let t2 = R2(5);
+    log(t2);
+    let t3 = R3(5);
+    log(t3);
+    let t4 = R4(5);
+    log(t4);
+    let t5 = R5(5);
+    log(t5);
+
+    let n1 = nestedCalls(5);
+    log(n1);
+
+    let n2 = nestedCalls(6);
+    log(n2);
+
+    let final = t1 + t2 + t3 + t4 + t5 + n1 + n2;
+    log(final);
+
+    return final;
+}
+
+exit(main());

@@ -1,7 +1,7 @@
 from . import expressions
 from . import statements
+import sys
 
-# Statemnt Handler
 class Stmt:
     def __init__(self, node, generator):
         self.generator = generator
@@ -23,16 +23,14 @@ class Stmt:
             params = ', '.join([Stmt.get_expr_value(param) for param in expr.parameters])
             return expr.name + "(" + params + ")"
         else:
-            raise Exception("Unsupported expression type")
+            print(f"Error: Unsupported expression type '{type(expr).__name__}'")
+            sys.exit(1)
 
-    def push(self): # This is where we handle the code generation for each statement
-        # Declarative Statements
+    def push(self):
         if isinstance(self.node, statements.Let):
             name = self.node.name
             expr = self.node.value
-
             value = Stmt.get_expr_value(expr)
-
             self.generator.emit(f"{name} = {value}\n")
 
         elif isinstance(self.node, statements.DefFunc):
@@ -47,11 +45,9 @@ class Stmt:
 
             self.generator.indent_pop()
         
-        # Control Flow Statements
         elif isinstance(self.node, statements.Exit):
             expr = self.node.exprType
             value = Stmt.get_expr_value(expr)
-
             self.generator.emit(f"exit_code = {value}\n")
             self.generator.emit("Std.exit(exit_code)\n")
         
@@ -67,6 +63,7 @@ class Stmt:
         elif isinstance(self.node, statements.Log):
             value = Stmt.get_expr_value(self.node.value)
             self.generator.emit(f"print({value})\n")
+
         elif isinstance(self.node, statements.If):
             condition = Stmt.get_expr_value(self.node.condition)
             self.generator.emit(f"if {condition}:\n")
@@ -78,13 +75,12 @@ class Stmt:
 
             self.generator.indent_pop()
 
-# Main parser class
+
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
     
-    # Helper Functions
     def peek(self):
         if self.pos >= len(self.tokens):
             return None
@@ -98,16 +94,14 @@ class Parser:
     def consume(self, expected):
         token = self.advance()
         if token != expected:
-            raise SyntaxError(f"Expected {expected}, got {token}")
+            print(f"Syntax Error: Expected '{expected}', got '{token}'")
+            sys.exit(1)
 
-    # High Level Parsing Functions
     def parse_program(self):
-        statements = []
-
+        stmts = []
         while self.peek() is not None:
-            statements.append(self.parse_statement())
-
-        return statements
+            stmts.append(self.parse_statement())
+        return stmts
     
     def parse_statement(self):
         token = self.peek()
@@ -127,9 +121,9 @@ class Parser:
         elif token == "if":
             return self.parse_if()
 
-        raise SyntaxError(f"Unknown statement: {token}")
+        print(f"Syntax Error: Unknown statement '{token}'")
+        sys.exit(1)
 
-    # Parse Expr
     def parse_expr(self, min_bp=0):
         left = self.parse_primary()
 
@@ -146,13 +140,16 @@ class Parser:
 
             self.advance()
             right = self.parse_expr(rbp)
-
             left = expressions.BinaryopExpr(left, op, right)
 
         return left
 
     def parse_primary(self):
         token = self.peek()
+
+        if token is None:
+            print("Syntax Error: Unexpected end of input")
+            sys.exit(1)
 
         if token == "(":
             self.consume("(")
@@ -173,12 +170,10 @@ class Parser:
 
             if self.peek() == "(":
                 self.consume("(")
-
                 parameters = []
 
                 if self.peek() != ")":
                     parameters.append(self.parse_expr())
-
                     while self.peek() == ",":
                         self.consume(",")
                         parameters.append(self.parse_expr())
@@ -187,87 +182,68 @@ class Parser:
                 return expressions.CallExpr(name, parameters)
             return expressions.VariableExpr(name)
 
-        raise SyntaxError(f"Unknown expression: {token}")
+        print(f"Syntax Error: Unexpected token '{token}'")
+        sys.exit(1)
     
-    # Parsing individual statements
     def parse_exit(self):
         self.consume("exit")
-
         value = self.parse_expr()
-
         self.consume(";")
-
         return statements.Exit(value)
     
     def parse_func(self):
         self.consume("func")
-
         name = self.advance()
-
         parameters = []
-
         self.consume("(")
 
         if self.peek() != ")":
-             parameters.append(self.advance())
-
-             while self.peek() == ",":
+            parameters.append(self.advance())
+            while self.peek() == ",":
                 self.consume(",")
-                parameters.append(self.advance())   
-        self.consume(")")
-        
-        self.consume("{")
+                parameters.append(self.advance())
 
+        self.consume(")")
+        self.consume("{")
         body = []
 
         while self.peek() != "}":
+            if self.peek() is None:
+                print(f"Syntax Error: Unclosed '{{' in function '{name}'")
+                sys.exit(1)
             body.append(self.parse_statement())
         
         self.consume("}")
-
         return statements.DefFunc(name, parameters, body)
     
     def parse_let(self):
         self.consume("let")
-
         name = self.advance()
-
         self.consume("=")
-
         value = self.parse_expr()
-
         self.consume(";")
-
         return statements.Let(name, value)
     
     def parse_return(self):
         self.consume("return")
-
         value = self.parse_expr()
-
         self.consume(";")
-
         return statements.Return(value)
     
     def parse_call(self):
         self.consume("call")
-
         name = self.advance()
-
         parameters = []
-
         self.consume("(")
 
         if self.peek() != ")":
-             parameters.append(self.parse_expr())
-
-             while self.peek() == ",":
+            parameters.append(self.parse_expr())
+            while self.peek() == ",":
                 self.consume(",")
-                parameters.append(self.parse_expr())   
+                parameters.append(self.parse_expr())
+
         self.consume(")")
-
         self.consume(";")
-
         return statements.Call(name, parameters)
     
     def parse_log(self):
@@ -285,6 +261,10 @@ class Parser:
 
         then_branch = []
         while self.peek() != "}":
+            if self.peek() is None:
+                print("Syntax Error: Unclosed '{' in if statement")
+                sys.exit(1)
             then_branch.append(self.parse_statement())
+
         self.consume("}")
         return statements.If(condition, then_branch)
