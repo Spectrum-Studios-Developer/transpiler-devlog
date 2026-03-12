@@ -9,6 +9,7 @@
 
 import tokenizer
 import parser.parser as parser
+import parser.libraries as libraries
 
 import os
 import sys
@@ -42,13 +43,13 @@ class Generator:
         self.indent -= 1
 
     def build(self):
-        FileUtils.append_to_file("import sys\n\n")
-        FileUtils.append_to_file("exit_code = 0\n\n")
-        FileUtils.append_to_file("def __program__():\n")
+        FileUtils.append_to_file("import sys\n\n# START LIBRARIES\n")
+        libraries.Std.build()
+        FileUtils.append_to_file("#END LIBRARIES\n\ndef __program__():\n")
+        FileUtils.append_to_file("    global exit_code\n\n    # Start of the user's program\n")
         FileUtils.append_to_file(''.join(self.out))
-        FileUtils.append_to_file("\n__program__()\n")
-        FileUtils.append_to_file("print(f'Exited with code {repr(exit_code)}')\n")
-        FileUtils.append_to_file("sys.exit(exit_code)\n")
+        FileUtils.append_to_file("\n__program__() # Execute the program\n")
+        FileUtils.append_to_file("Std.exit(exit_code)\n")
 
 if __name__ == "__main__":
     FileUtils.init()

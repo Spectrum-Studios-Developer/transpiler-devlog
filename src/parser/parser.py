@@ -1,3 +1,5 @@
+from turtle import left
+
 import main
 from . import expressions
 from . import statements
@@ -19,7 +21,7 @@ class Stmt:
         elif isinstance(expr, expressions.BinaryopExpr):
             left = Stmt.get_expr_value(expr.left)
             right = Stmt.get_expr_value(expr.right)
-            return f"{left} {expr.operator} {right}"
+            return f"({left} {expr.operator} {right})"
         elif isinstance(expr, expressions.CallExpr):
             params = ', '.join([Stmt.get_expr_value(param) for param in expr.parameters])
             return expr.name + "(" + params + ")"
@@ -54,8 +56,7 @@ class Stmt:
             value = Stmt.get_expr_value(expr)
 
             self.generator.emit(f"exit_code = {value}\n")
-            self.generator.emit("print(f'Exited with code {repr(exit_code)}')\n")
-            self.generator.emit("sys.exit(exit_code)\n")
+            self.generator.emit("Std.exit(exit_code)\n")
         
         if isinstance(self.node, statements.Return):
             value = Stmt.get_expr_value(self.node.value)
@@ -132,13 +133,24 @@ class Parser:
         raise SyntaxError(f"Unknown statement: {token}")
 
     # Parse Expr
-    def parse_expr(self):
+    def parse_expr(self, min_bp=0):
         left = self.parse_primary()
 
-        while self.peek() in expressions.BinaryopExpr.BINARY_OPERATORS:
-            operator = self.advance()
-            right = self.parse_primary()
-            left = expressions.BinaryopExpr(left, operator, right)
+        while True:
+            op = self.peek()
+
+            if op not in expressions.BinaryopExpr.BINDING_POWER:
+                break
+
+            lbp, rbp = expressions.BinaryopExpr.BINDING_POWER[op]
+
+            if lbp < min_bp:
+                break
+
+            self.advance()
+            right = self.parse_expr(rbp)
+
+            left = expressions.BinaryopExpr(left, op, right)
 
         return left
 
@@ -149,7 +161,6 @@ class Parser:
             self.consume("(")
             expr = self.parse_expr()
             self.consume(")")
-            print("Compiler Warning: Grouped expressions are ignored; consider removing parentheses?")
             return expr
 
         if token.isdigit():

@@ -12,7 +12,19 @@ class VariableExpr:
         self.name = name
 
 class BinaryopExpr:
-    BINARY_OPERATORS = {"+", "-", "*", "/", "=="}
+    BINDING_POWER = {
+        "+": (10, 11),
+        "-": (10, 11),
+
+        "*": (20, 21),
+        "/": (20, 21),
+
+        "==": (5, 6),
+        "!=": (5, 6),
+
+        "<": (7, 8),
+        ">": (7, 8),
+    }
     def __init__(self, left, operator, right):
         self.left = left
         self.operator = operator
