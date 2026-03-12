@@ -1,6 +1,3 @@
-from turtle import left
-
-import main
 from . import expressions
 from . import statements
 
@@ -38,7 +35,7 @@ class Stmt:
 
             self.generator.emit(f"{name} = {value}\n")
 
-        if isinstance(self.node, statements.DefFunc):
+        elif isinstance(self.node, statements.DefFunc):
             name = self.node.name
             params = ', '.join(self.node.parameters)
             self.generator.emit(f"def {name}({params}):\n")
@@ -51,26 +48,26 @@ class Stmt:
             self.generator.indent_pop()
         
         # Control Flow Statements
-        if isinstance(self.node, statements.Exit):
+        elif isinstance(self.node, statements.Exit):
             expr = self.node.exprType
             value = Stmt.get_expr_value(expr)
 
             self.generator.emit(f"exit_code = {value}\n")
             self.generator.emit("Std.exit(exit_code)\n")
         
-        if isinstance(self.node, statements.Return):
+        elif isinstance(self.node, statements.Return):
             value = Stmt.get_expr_value(self.node.value)
             self.generator.emit(f"return {value}\n")
 
-        if isinstance(self.node, statements.Call):
+        elif isinstance(self.node, statements.Call):
             name = self.node.name
             params = ', '.join([Stmt.get_expr_value(param) for param in self.node.parameters])
             self.generator.emit(f"{name}({params})\n")
 
-        if isinstance(self.node, statements.Log):
+        elif isinstance(self.node, statements.Log):
             value = Stmt.get_expr_value(self.node.value)
             self.generator.emit(f"print({value})\n")
-        if isinstance(self.node, statements.If):
+        elif isinstance(self.node, statements.If):
             condition = Stmt.get_expr_value(self.node.condition)
             self.generator.emit(f"if {condition}:\n")
             self.generator.indent_push()

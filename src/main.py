@@ -48,7 +48,8 @@ class Generator:
         FileUtils.append_to_file("#END LIBRARIES\n\ndef __program__():\n")
         FileUtils.append_to_file("    global exit_code\n\n    # Start of the user's program\n")
         FileUtils.append_to_file(''.join(self.out))
-        FileUtils.append_to_file("\n__program__() # Execute the program\n")
+        FileUtils.append_to_file("\nexit_code = 0\n")
+        FileUtils.append_to_file("__program__() # Execute the program\n")
         FileUtils.append_to_file("Std.exit(exit_code)\n")
 
 if __name__ == "__main__":
