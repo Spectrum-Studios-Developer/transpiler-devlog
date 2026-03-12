@@ -51,6 +51,8 @@ class Generator:
         FileUtils.append_to_file("\nexit_code = 0\n")
         FileUtils.append_to_file("__program__() # Execute the program\n")
         FileUtils.append_to_file("Std.exit(exit_code)\n")
+        print(f"Finished: File generated at {build_path}")
+        print(f"---------------------------------------------------------")
 
 if __name__ == "__main__":
     FileUtils.init()
@@ -62,8 +64,20 @@ if __name__ == "__main__":
     parser_module = parser.Parser(tokens)
     program = parser_module.parse_program()
 
+    print(f"--------------------  PLANG COMPILER  -------------------")
     for stmt in program:
         node = parser.Stmt(stmt, generator)
         node.push()
+        print(f"Generated {stmt}")
     
     generator.build()
+
+
+'''
+1 else
+2 while
+3 boolean literals (true false)
+4 logical operators (&& ||)
+5 arrays
+6 scopes
+'''
