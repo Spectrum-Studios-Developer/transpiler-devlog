@@ -9,17 +9,23 @@
 
 import tokenizer
 import parser.parser as parser
+
 import generator.py.py as py_generator
+import generator.x8664.x8664 as x8664_generator
 
 import os
 import sys
 
+build_version = sys.argv[2] if len(sys.argv) > 2 else "python"
+if build_version not in ["python", "x86-64"]:
+    print(f"Error: Unsupported build version '{build_version}'")
+    sys.exit(1)
+build_extension = "py" if build_version == "python" else "asm" if build_version == "x86-64" else sys.exit(1)
+
 cwd = os.getcwd()
 base_folder = os.path.basename(cwd)
 input_path = os.path.join(cwd, sys.argv[1] if len(sys.argv) > 1 else "input.plang")
-build_path = os.path.join(cwd, "build", f"{base_folder}.py")
-
-build_version = sys.argv[2] if len(sys.argv) > 2 else "python"
+build_path = os.path.join(cwd, "build", f"{base_folder}.{build_extension}")
 
 class FileUtils:
     def init():
@@ -34,11 +40,25 @@ class FileUtils:
 
 class Generator:
     def __init__(self):
-        self.out = []
+        self.out = [] # for python code generation
+
+        self.text = [] # for x86-64 text section
+        self.data = [] # for x86-64 data section
+        self.label_id = 0 # for generating unique labels in x86-64 assembly
+
         self.indent = 1
 
-    def emit(self, line):
-        self.out.append(("    " * self.indent) + line)
+    def emit(self, line, type="out"):
+        if type == "out":
+            self.out.append(("    " * self.indent) + line)
+        elif type == "text":
+            self.text.append(("    " * self.indent) + line)
+        elif type == "data":
+            self.data.append(line)
+    
+    def new_label(self):
+        self.label_id += 1
+        return f"L{self.label_id}"
 
     def indent_push(self):
         self.indent += 1
@@ -55,7 +75,12 @@ class Generator:
             print(f"---------------------------------------------------------")
             return
         elif version == "x86-64":
-            print("x86-64 generation not implemented yet")
+            x8664_generator.CodeGenerator.build_data()
+            FileUtils.append_to_file(''.join(self.data))
+            x8664_generator.CodeGenerator.build_text()
+            FileUtils.append_to_file(''.join(self.out))
+            print(f"Finished: File generated at {build_path}")
+            print(f"---------------------------------------------------------")
             return
         else:
             print(f"Error: Unsupported build version '{version}'")
@@ -77,12 +102,11 @@ if __name__ == "__main__":
         if build_version == "python":
             node = py_generator.CodeGenerator(stmt, generator)
         elif build_version == "x86-64":
-            print("x86-64 generation not implemented yet")
-            sys.exit(1)
+            node = x8664_generator.CodeGenerator(stmt, generator)
         else:
             print(f"Error: Unsupported build version '{build_version}'")
             sys.exit(1)
-        node.push()
+        node.push(generator)
         index += 1
         print(f"[{index}/{len(program)}] Generated {stmt.__class__.__name__} statement")
     
