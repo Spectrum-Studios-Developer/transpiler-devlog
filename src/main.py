@@ -9,7 +9,7 @@
 
 import tokenizer
 import parser.parser as parser
-import parser.libraries as libraries
+import generator.py.py as py_generator
 
 import os
 import sys
@@ -18,6 +18,8 @@ cwd = os.getcwd()
 base_folder = os.path.basename(cwd)
 input_path = os.path.join(cwd, sys.argv[1] if len(sys.argv) > 1 else "input.plang")
 build_path = os.path.join(cwd, "build", f"{base_folder}.py")
+
+build_version = sys.argv[2] if len(sys.argv) > 2 else "python"
 
 class FileUtils:
     def init():
@@ -44,17 +46,20 @@ class Generator:
     def indent_pop(self):
         self.indent -= 1
 
-    def build(self):
-        FileUtils.append_to_file("import sys\n\n# START LIBRARIES\n")
-        libraries.Std.build()
-        FileUtils.append_to_file("#END LIBRARIES\n\ndef __program__():\n")
-        FileUtils.append_to_file("    global exit_code\n\n    # Start of the user's program\n")
-        FileUtils.append_to_file(''.join(self.out))
-        FileUtils.append_to_file("\nexit_code = 0\n")
-        FileUtils.append_to_file("__program__() # Execute the program\n")
-        FileUtils.append_to_file("Std.exit(exit_code)\n")
-        print(f"Finished: File generated at {build_path}")
-        print(f"---------------------------------------------------------")
+    def build(self, version):
+        if version == "python":
+            py_generator.CodeGenerator.build_start_of_file()
+            FileUtils.append_to_file(''.join(self.out))
+            py_generator.CodeGenerator.build_end_of_file()
+            print(f"Finished: File generated at {build_path}")
+            print(f"---------------------------------------------------------")
+            return
+        elif version == "x86-64":
+            print("x86-64 generation not implemented yet")
+            return
+        else:
+            print(f"Error: Unsupported build version '{version}'")
+            return
 
 if __name__ == "__main__":
     FileUtils.init()
@@ -69,12 +74,19 @@ if __name__ == "__main__":
 
     print(f"--------------------  PLANG COMPILER  -------------------")
     for stmt in program:
-        node = parser.Stmt(stmt, generator)
+        if build_version == "python":
+            node = py_generator.CodeGenerator(stmt, generator)
+        elif build_version == "x86-64":
+            print("x86-64 generation not implemented yet")
+            sys.exit(1)
+        else:
+            print(f"Error: Unsupported build version '{build_version}'")
+            sys.exit(1)
         node.push()
         index += 1
         print(f"[{index}/{len(program)}] Generated {stmt.__class__.__name__} statement")
     
-    generator.build()
+    generator.build(build_version)
 
 
 '''
