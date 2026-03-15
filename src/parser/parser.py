@@ -28,9 +28,6 @@ class Parser:
         while self.peek() is not None:
             stmts.append(self.parse_statement())
         return stmts
-    
-
-
 
     def parse_statement(self):
         token = self.peek()
@@ -57,14 +54,30 @@ class Parser:
             return self.parse_inc()
         elif token == "update":
             return self.parse_update()
+        elif token == "struct":
+            return self.parse_struct()
         
         print(f"Syntax Error: Unknown statement '{token}'")
         sys.exit(1)
 
+    def parse_lvalue(self):
+        name = self.advance()
+        expr = expressions.VariableExpr(name)
 
+        while True:
+            if self.peek() == "[":
+                self.consume("[")
+                index = self.parse_expr()
+                self.consume("]")
+                expr = expressions.CallArrayExpr(expr, index)
+            elif self.peek() == ".":
+                self.consume(".")
+                field = self.advance()
+                expr = expressions.CallStructExpr(expr, field)
+            else:
+                break
 
-
-
+        return expr
 
     def parse_expr(self, min_bp=0):
         left = self.parse_primary()
@@ -113,6 +126,17 @@ class Parser:
         if token == "false":
             self.advance()
             return expressions.BoolExpr(False)
+
+        if token == "[":
+            self.consume("[")
+            elements = []
+            if self.peek() != "]":
+                elements.append(self.parse_expr())
+                while self.peek() == ",":
+                    self.consume(",")
+                    elements.append(self.parse_expr())
+            self.consume("]")
+            return expressions.ArrayExpr(elements)
         
         if token.isidentifier():
             name = self.advance()
@@ -120,15 +144,25 @@ class Parser:
             if self.peek() == "(":
                 self.consume("(")
                 parameters = []
-
                 if self.peek() != ")":
                     parameters.append(self.parse_expr())
                     while self.peek() == ",":
                         self.consume(",")
                         parameters.append(self.parse_expr())
-                
                 self.consume(")")
                 return expressions.CallExpr(name, parameters)
+
+            if self.peek() == "[":
+                self.consume("[")
+                index = self.parse_expr()
+                self.consume("]")
+                return expressions.CallArrayExpr(expressions.VariableExpr(name), index)
+
+            if self.peek() == ".":
+                self.consume(".")
+                field = self.advance()
+                return expressions.CallStructExpr(expressions.VariableExpr(name), field)
+
             return expressions.VariableExpr(name)
 
         print(f"Syntax Error: Unexpected token '{token}'")
@@ -262,17 +296,39 @@ class Parser:
 
     def parse_inc(self):
         self.consume("inc")
-        variable = self.advance()
+        variable = self.parse_lvalue()
         self.consume(",")
         value = self.parse_expr()
         self.consume(";")
         return statements.Inc(variable, value)
-    
+
     def parse_update(self):
         self.consume("update")
-        variable = self.advance()
+        variable = self.parse_lvalue()
         self.consume(",")
         value = self.parse_expr()
         self.consume(";")
+
+        if isinstance(variable, expressions.CallStructExpr):
+            struct_name = variable.struct.name
+            field_name = variable.field
+            return statements.StructFieldUpdate(struct_name, field_name, value)
+
         return statements.Update(variable, value)
     
+    def parse_struct(self):
+        self.consume("struct")
+        name = self.advance()
+        fields = []
+        self.consume("{")
+
+        while self.peek() != "}":
+            if self.peek() is None:
+                print("Syntax Error: Unclosed '{' in struct definition")
+                sys.exit(1)
+            field = self.advance()
+            self.consume(";")
+            fields.append(field)
+
+        self.consume("}")
+        return statements.Struct(name, fields)

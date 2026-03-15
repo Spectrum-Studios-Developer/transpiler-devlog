@@ -20,7 +20,7 @@ TOKEN_SPEC = [
     ("STRING", r'"[^"]*"|\'[^\']*\''),
 
     # single char symbols
-    ("SYMBOL", r"[+\-*/=(){};,.<>#]"),
+    ("SYMBOL", r"[+\-*/=(){};,.<>#&\[\]]"),
 ]
 
 MASTER_RE = re.compile(

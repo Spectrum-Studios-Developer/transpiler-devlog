@@ -51,3 +51,14 @@ class Update:
     def __init__(self, variable, value):
         self.variable = variable
         self.value = value
+
+class StructFieldUpdate:
+    def __init__(self, struct_name, field_name, value):
+        self.struct_name = struct_name
+        self.field_name = field_name
+        self.value = value
+
+class Struct:
+    def __init__(self, name, fields):
+        self.name = name
+        self.fields = fields

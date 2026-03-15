@@ -136,7 +136,34 @@ if __name__ == "__main__":
 1 else -> else if  - DONE
 2 while - DONE
 3 boolean literals (true false) - DONE
-4 logical operators (&& ||)
-5 arrays
-6 scopes
+4 logical operators (&& ||) - DONE
+5 comments - DONE
+6 variable control - DONE
+    - inc (increment variable by value)
+    - update (set variable to value)
+7 arrays - DONE
+8 structs - 
+9 methods on structs
+10 pointers to structs:
+    let p = &myStruct
+    p->health = 10
+11 for loops
+12 literal strings
+13 backend libraries
+    # network:
+        - send(address, data)
+        - receive(port)
+    # file:
+        - write(path, data)
+        - read(path)
+    # math:
+        - sin(angle)
+        - cos(angle)
+        - tan(angle)
+        - sqrt(value)
+        - pow(base, exponent)
+        - random(a, b) (returns a float between a and b)
+        - ltime()
+        - utctime()
+
 ''' 
