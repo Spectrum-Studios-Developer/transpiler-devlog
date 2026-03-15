@@ -5,6 +5,8 @@ import parser.expressions as expressions
 import parser.statements as statements
 from main import FileUtils
 
+std = libraries.Std()
+
 class CodeGenerator:
     def __init__(self, node, generator):
         self.generator = generator
@@ -15,12 +17,12 @@ class CodeGenerator:
         FileUtils.append_to_file("import sys\n")
         FileUtils.append_to_file("\n# START LIBRARIES\n")
 
-        libraries.Std.build()
+        std.build()
 
-        FileUtils.append_to_file("\n# END LIBRARIES\n")
+        FileUtils.append_to_file("# END LIBRARIES\n")
         FileUtils.append_to_file("\ndef __program__():\n")
         FileUtils.append_to_file("    global exit_code\n")
-        FileUtils.append_to_file("# Start of the user's program\n")
+        FileUtils.append_to_file("    # Start of the user's program\n")
 
     @staticmethod
     def build_end_of_file():
@@ -38,6 +40,8 @@ class CodeGenerator:
             return expr.value
         elif isinstance(expr, expressions.VariableExpr):
             return expr.name
+        elif isinstance(expr, expressions.BoolExpr):
+            return "True" if expr.value else "False"
         elif isinstance(expr, expressions.BinaryopExpr):
             left = CodeGenerator.get_expr_value(expr.left)
             right = CodeGenerator.get_expr_value(expr.right)
@@ -97,3 +101,31 @@ class CodeGenerator:
                 node.push()
 
             self.generator.indent_pop()
+            if self.node.else_branch:
+                self.generator.emit("else:\n")
+                self.generator.indent_push()
+                for stmt in self.node.else_branch:
+                    node = CodeGenerator(stmt, self.generator)
+                    node.push()
+                self.generator.indent_pop()
+
+        elif isinstance(self.node, statements.dbgstmt):
+            print(self.node.cmd)
+            if self.node.cmd == "exitcode":
+                std.exitdbg = True
+
+        elif isinstance(self.node, statements.While):
+            condition = CodeGenerator.get_expr_value(self.node.condition)
+            self.generator.emit(f"while {condition}:\n")
+            self.generator.indent_push()
+
+            for stmt in self.node.body:
+                node = CodeGenerator(stmt, self.generator)
+                node.push()
+
+            self.generator.indent_pop()
+        
+        elif isinstance(self.node, statements.Inc):
+            variable = self.node.variable
+            value = CodeGenerator.get_expr_value(self.node.value)
+            self.generator.emit(f"{variable} += {value}\n")

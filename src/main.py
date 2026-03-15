@@ -106,17 +106,17 @@ if __name__ == "__main__":
         else:
             print(f"Error: Unsupported build version '{build_version}'")
             sys.exit(1)
-        node.push(generator)
+        node.push()
         index += 1
-        print(f"[{index}/{len(program)}] Generated {stmt.__class__.__name__} statement")
+        print(f"[{index}/{len(program)}] Generated '{stmt.__class__.__name__}' statement")
     
     generator.build(build_version)
 
 
 '''
-1 else
-2 while
-3 boolean literals (true false)
+1 else -> else if  - DONE
+2 while - DONE
+3 boolean literals (true false) - DONE
 4 logical operators (&& ||)
 5 arrays
 6 scopes

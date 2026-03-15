@@ -10,6 +10,10 @@ class StringExpr:
 class VariableExpr:
     def __init__(self, name):
         self.name = name
+    
+class BoolExpr:
+    def __init__(self, value):
+        self.value = value
 
 class BinaryopExpr:
     BINDING_POWER = {

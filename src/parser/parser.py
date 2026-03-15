@@ -47,6 +47,12 @@ class Parser:
             return self.parse_log()
         elif token == "if":
             return self.parse_if()
+        elif token == "#":
+            return self.parse_dbgstmt()
+        elif token == "while":
+            return self.parse_while()
+        elif token == "inc":
+            return self.parse_inc()
 
         print(f"Syntax Error: Unknown statement '{token}'")
         sys.exit(1)
@@ -91,6 +97,13 @@ class Parser:
         if token.startswith('"') or token.startswith("'"):
             self.advance()
             return expressions.StringExpr(token[1:-1])
+        
+        if token == "true":
+            self.advance()
+            return expressions.BoolExpr(True)
+        if token == "false":
+            self.advance()
+            return expressions.BoolExpr(False)
         
         if token.isidentifier():
             name = self.advance()
@@ -194,4 +207,53 @@ class Parser:
             then_branch.append(self.parse_statement())
 
         self.consume("}")
+        if self.peek() == "else":
+            self.consume("else")
+            if self.peek() == "if":
+                else_branch = [self.parse_if()]
+                stmt = statements.If(condition, then_branch)
+                stmt.else_branch = else_branch
+                return stmt
+            self.consume("{")
+            else_branch = []
+            while self.peek() != "}":
+                if self.peek() is None:
+                    print("Syntax Error: Unclosed '{' in else statement")
+                    sys.exit(1)
+                else_branch.append(self.parse_statement())
+            self.consume("}")
+            stmt = statements.If(condition, then_branch)
+            stmt.else_branch = else_branch
+            return stmt
         return statements.If(condition, then_branch)
+
+    def parse_dbgstmt(self):
+        self.consume("#")
+        cmd = self.advance()
+        self.consume(";")
+        return statements.dbgstmt(cmd)
+
+    def parse_while(self):
+        self.consume("while")
+        self.consume("(")
+        condition = self.parse_expr()
+        self.consume(")")
+        self.consume("{")
+
+        body = []
+        while self.peek() != "}":
+            if self.peek() is None:
+                print("Syntax Error: Unclosed '{' in while statement")
+                sys.exit(1)
+            body.append(self.parse_statement())
+
+        self.consume("}")
+        return statements.While(condition, body)
+
+    def parse_inc(self):
+        self.consume("inc")
+        variable = self.advance()
+        self.consume(",")
+        value = self.parse_expr()
+        self.consume(";")
+        return statements.Inc(variable, value)

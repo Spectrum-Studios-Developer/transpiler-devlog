@@ -79,9 +79,8 @@ class CodeGenerator:
             print(f"Error: Unsupported expression type '{type(expr).__name__}'")
             sys.exit(1)
 
-    def push(self, generator=None):
-        if generator is None:
-            generator = self.generator
+    def push(self):
+        generator = self.generator
 
         if isinstance(self.node, statements.Let):
             name = self.node.name
