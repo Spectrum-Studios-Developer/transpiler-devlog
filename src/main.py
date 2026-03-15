@@ -16,40 +16,35 @@ import generator.x8664.x8664 as x8664_generator
 import os
 import sys
 
-build_version = sys.argv[2] if len(sys.argv) > 2 else "python"
-if build_version not in ["python", "x86-64"]:
-    print(f"Error: Unsupported build version '{build_version}'")
-    sys.exit(1)
-if build_version == "x86-64":
-    print('Warning: Building for x86-64 is currently in early stages and may not support all features or generate fully optimized code.')
-    print("Do you wish to succeed anyway? (y/n)")
-    if input().lower() != "y":
-        sys.exit(0)
-build_extension = "py" if build_version == "python" else "asm" if build_version == "x86-64" else sys.exit(1)
+build_version = None
+build_extension = None
+cwd = None
+base_folder = None
+input_path = None
+build_path = None
 
-cwd = os.getcwd()
-base_folder = os.path.basename(cwd)
-input_path = os.path.join(cwd, sys.argv[1] if len(sys.argv) > 1 else "input.plang")
-build_path = os.path.join(cwd, "build", f"{base_folder}.{build_extension}")
 
 class FileUtils:
+    @staticmethod
     def init():
-        os.makedirs(os.path.dirname(build_path), exist_ok=True)
-        with open(build_path, "w") as f:
+        m = sys.modules.get('__main__') or sys.modules.get('main')
+        os.makedirs(os.path.dirname(m.build_path), exist_ok=True)
+        with open(m.build_path, "w") as f:
             f.write("")
 
     @staticmethod
     def append_to_file(content):
-        with open(build_path, "a") as f:
+        m = sys.modules.get('__main__') or sys.modules.get('main')
+        with open(m.build_path, "a") as f:
             f.write(content)
 
 class Generator:
     def __init__(self):
-        self.out = [] # for python code generation
+        self.out = []
 
-        self.text = [] # for x86-64 text section
-        self.data = [] # for x86-64 data section
-        self.label_id = 0 # for generating unique labels in x86-64 assembly
+        self.text = []
+        self.data = []
+        self.label_id = 0
 
         self.indent = 1
 
@@ -78,24 +73,47 @@ class Generator:
             py_generator.CodeGenerator.build_end_of_file()
             print(f"Finished: File generated at {build_path}")
             print(f"---------------------------------------------------------")
-            return
         elif version == "x86-64":
             x8664_generator.CodeGenerator.build_data()
             FileUtils.append_to_file(''.join(self.data))
             x8664_generator.CodeGenerator.build_text()
-            FileUtils.append_to_file(''.join(self.out))
+            FileUtils.append_to_file(''.join(self.text))
             print(f"Finished: File generated at {build_path}")
             print(f"---------------------------------------------------------")
-            return
         else:
             print(f"Error: Unsupported build version '{version}'")
-            return
 
-if __name__ == "__main__":
+
+def resolve_build_config():
+    global build_version, build_extension, cwd, base_folder, input_path, build_path
+    
+    build_version = sys.argv[2] if len(sys.argv) > 2 else "python"
+    if build_version not in ["python", "x86-64"]:
+        print(f"Error: Unsupported build version '{build_version}'")
+        sys.exit(1)
+
+    if build_version == "x86-64":
+        print("Warning: Building for x86-64 is currently in early stages and may not support all features or generate fully optimized code.")
+        print("Do you wish to succeed anyway? (y/n)")
+        if input().lower() != "y":
+            sys.exit(0)
+
+    build_extension = "py" if build_version == "python" else "asm"
+
+    cwd = os.getcwd()
+    base_folder = os.path.basename(cwd)
+    input_path = os.path.join(cwd, sys.argv[1] if len(sys.argv) > 1 else "input.plang")
+    build_path = os.path.join(cwd, "build", f"{base_folder}.{build_extension}")
+    
+    print(f"DEBUG build_path = {build_path}")
+    print(f"DEBUG sys.modules['main'].build_path = {sys.modules['main'].build_path}")
+
+
+def main():
+    resolve_build_config()
     FileUtils.init()
     generator = Generator()
 
-    depth_index = 0
     index = 0
     tokens = tokenizer.getTokens(input_path)
 
@@ -114,8 +132,12 @@ if __name__ == "__main__":
         node.push()
         index += 1
         print(f"[{index}/{len(program)}] Generated '{stmt.__class__.__name__}' statement")
-    
+
     generator.build(build_version)
+
+
+if __name__ == "__main__":
+    main()
 
 
 '''
@@ -125,4 +147,4 @@ if __name__ == "__main__":
 4 logical operators (&& ||)
 5 arrays
 6 scopes
-'''
+''' 

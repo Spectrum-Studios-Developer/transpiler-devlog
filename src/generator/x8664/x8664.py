@@ -9,6 +9,8 @@ THIS IS A WORK IN PROGRESS AND NOT ALL FEATURES MAY BE SUPPORTED OR FULLY FUNCTI
 ESPECIALLY FOR COMPLEX CONSTRUCTS. USE WITH CAUTION AND TEST THOROUGHLY. FEEL FREE TO CONTRIBUTE OR REPORT ISSUES TO HELP IMPROVE THE X86-64 BACKEND.
 '''
 
+WIN64_REGS = ["rcx", "rdx", "r8", "r9"]
+
 class CodeGenerator:
     def __init__(self, node, generator):
         self.generator = generator
@@ -16,15 +18,25 @@ class CodeGenerator:
 
     @staticmethod
     def build_data():
-        main.FileUtils.append_to_file("section .data\n\n")
+        main.FileUtils.append_to_file("bits 64\n")
+        main.FileUtils.append_to_file("default rel\n\n")
+        main.FileUtils.append_to_file("extern ExitProcess\n")
+        main.FileUtils.append_to_file("extern printf\n\n")
+        main.FileUtils.append_to_file("section .data\n")
 
     @staticmethod
     def build_text():
         main.FileUtils.append_to_file("\nsection .text\n")
-        main.FileUtils.append_to_file("\nglobal main\n")
-        main.FileUtils.append_to_file("\nmain:\n")
+        main.FileUtils.append_to_file("global main\n\n")
+        main.FileUtils.append_to_file("main:\n")
         main.FileUtils.append_to_file("    push rbp\n")
         main.FileUtils.append_to_file("    mov rbp, rsp\n")
+        main.FileUtils.append_to_file("    sub rsp, 32\n")
+
+    @staticmethod
+    def build_end():
+        main.FileUtils.append_to_file("    xor rcx, rcx\n")
+        main.FileUtils.append_to_file("    call ExitProcess\n")
 
     @staticmethod
     def get_expr_value(expr, generator):
@@ -32,37 +44,55 @@ class CodeGenerator:
             label = f"str{generator.label_id}"
             generator.label_id += 1
             generator.emit(f'    {label} db "{expr.value}", 0\n', type="data")
-            generator.emit(f"    lea rax, [rel {label}]\n", type="text")
+            generator.emit(f"    lea rcx, [{label}]\n", type="text")
 
         elif isinstance(expr, expressions.NumberExpr):
             generator.emit(f"    mov rax, {expr.value}\n", type="text")
 
+        elif isinstance(expr, expressions.BoolExpr):
+            val = "1" if expr.value else "0"
+            generator.emit(f"    mov rax, {val}\n", type="text")
+
         elif isinstance(expr, expressions.VariableExpr):
-            generator.emit(f"    mov rax, [rel {expr.name}]\n", type="text")
+            generator.emit(f"    mov rax, [{expr.name}]\n", type="text")
 
         elif isinstance(expr, expressions.BinaryopExpr):
-            CodeGenerator.get_expr_value(expr.left, generator)
-            generator.emit("    push rax\n", type="text")
-            CodeGenerator.get_expr_value(expr.right, generator)
-            generator.emit("    pop rbx\n", type="text")
-
-            if expr.operator == "+":
-                generator.emit("    add rax, rbx\n", type="text")
-            elif expr.operator == "-":
-                generator.emit("    sub rbx, rax\n", type="text")
-                generator.emit("    mov rax, rbx\n", type="text")
-            elif expr.operator == "*":
-                generator.emit("    imul rax, rbx\n", type="text")
-            elif expr.operator == "/":
-                generator.emit("    xor rdx, rdx\n", type="text")
-                generator.emit("    mov rcx, rax\n", type="text")
-                generator.emit("    mov rax, rbx\n", type="text")
-                generator.emit("    idiv rcx\n", type="text")
+            if expr.operator in ("==", "!=", "<", ">", "<=", ">="):
+                CodeGenerator.get_expr_value(expr.left, generator)
+                generator.emit("    push rax\n", type="text")
+                CodeGenerator.get_expr_value(expr.right, generator)
+                generator.emit("    pop rbx\n", type="text")
+                generator.emit("    cmp rbx, rax\n", type="text")
+                jump_map = {
+                    "==": "sete",
+                    "!=": "setne",
+                    "<":  "setl",
+                    ">":  "setg",
+                    "<=": "setle",
+                    ">=": "setge",
+                }
+                generator.emit(f"    {jump_map[expr.operator]} al\n", type="text")
+                generator.emit("    movzx rax, al\n", type="text")
+            else:
+                CodeGenerator.get_expr_value(expr.left, generator)
+                generator.emit("    push rax\n", type="text")
+                CodeGenerator.get_expr_value(expr.right, generator)
+                generator.emit("    pop rbx\n", type="text")
+                if expr.operator == "+":
+                    generator.emit("    add rax, rbx\n", type="text")
+                elif expr.operator == "-":
+                    generator.emit("    sub rbx, rax\n", type="text")
+                    generator.emit("    mov rax, rbx\n", type="text")
+                elif expr.operator == "*":
+                    generator.emit("    imul rax, rbx\n", type="text")
+                elif expr.operator == "/":
+                    generator.emit("    mov rcx, rax\n", type="text")
+                    generator.emit("    mov rax, rbx\n", type="text")
+                    generator.emit("    xor rdx, rdx\n", type="text")
+                    generator.emit("    idiv rcx\n", type="text")
 
         elif isinstance(expr, expressions.CallExpr):
-            WIN64_REGS = ["rcx", "rdx", "r8", "r9"]
             stack_args = []
-
             for i, param in enumerate(expr.parameters):
                 CodeGenerator.get_expr_value(param, generator)
                 if i < 4:
@@ -71,7 +101,6 @@ class CodeGenerator:
                     stack_args.append(i)
                     generator.emit("    push rax\n", type="text")
 
-            # 32-byte shadow space (Windows x64 ABI)
             generator.emit("    sub rsp, 32\n", type="text")
             generator.emit(f"    call {expr.name}\n", type="text")
             generator.emit("    add rsp, 32\n", type="text")
@@ -88,26 +117,32 @@ class CodeGenerator:
 
         if isinstance(self.node, statements.Let):
             name = self.node.name
-            expr = self.node.value
-            CodeGenerator.get_expr_value(expr, generator)
-            generator.emit(f"    mov [rel {name}], rax\n", type="text")
-            generator.emit(f"    {name} dq 0\n", type="data")
+            if isinstance(self.node.value, expressions.StringExpr):
+                label = f"str{generator.label_id}"
+                generator.label_id += 1
+                generator.emit(f'    {label} db "{self.node.value.value}", 0\n', type="data")
+                generator.emit(f"    {name} dq {label}\n", type="data")
+            else:
+                CodeGenerator.get_expr_value(self.node.value, generator)
+                generator.emit(f"    mov [{name}], rax\n", type="text")
+                generator.emit(f"    {name}: dq 0\n", type="data")
 
         elif isinstance(self.node, statements.DefFunc):
             name = self.node.name
+            generator.indent_pop()
             generator.emit(f"\n{name}:\n", type="text")
+            generator.indent_push()
             generator.emit("    push rbp\n", type="text")
-            generator.emit("    mov rbp, rsp\n", type="text")
 
-            WIN64_REGS = ["rcx", "rdx", "r8", "r9"]
             for i, param in enumerate(self.node.parameters):
-                offset = (i + 2) * 8
                 if i < 4:
-                    generator.emit(f"    mov [rbp+{offset}], {WIN64_REGS[i]}\n", type="text")
+                    generator.emit(f"    mov [{param}], {WIN64_REGS[i]}\n", type="text")
+                    generator.emit(f"    {param}: dq 0\n", type="data")
 
             for stmt in self.node.body:
                 CodeGenerator(stmt, generator).push()
 
+            generator.emit("    add rsp, 32\n", type="text")
             generator.emit("    pop rbp\n", type="text")
             generator.emit("    ret\n", type="text")
 
@@ -118,6 +153,7 @@ class CodeGenerator:
 
         elif isinstance(self.node, statements.Return):
             CodeGenerator.get_expr_value(self.node.value, generator)
+            generator.emit("    add rsp, 32\n", type="text")
             generator.emit("    pop rbp\n", type="text")
             generator.emit("    ret\n", type="text")
 
@@ -127,13 +163,13 @@ class CodeGenerator:
 
         elif isinstance(self.node, statements.Log):
             CodeGenerator.get_expr_value(self.node.value, generator)
-            generator.emit("    mov rcx, rax\n", type="text")
+            generator.emit("    sub rsp, 32\n", type="text")
             generator.emit("    call printf\n", type="text")
+            generator.emit("    add rsp, 32\n", type="text")
 
         elif isinstance(self.node, statements.If):
-            else_label = f".else{generator.label_id}"
-            end_label = f".endif{generator.label_id}"
-            generator.label_id += 1
+            else_label = generator.new_label()
+            end_label = generator.new_label()
 
             CodeGenerator.get_expr_value(self.node.condition, generator)
             generator.emit("    cmp rax, 0\n", type="text")
@@ -150,6 +186,32 @@ class CodeGenerator:
                 generator.emit(f"{end_label}:\n", type="text")
             else:
                 generator.emit(f"{else_label}:\n", type="text")
+
+        elif isinstance(self.node, statements.While):
+            loop_label = generator.new_label()
+            end_label = generator.new_label()
+
+            generator.emit(f"{loop_label}:\n", type="text")
+            CodeGenerator.get_expr_value(self.node.condition, generator)
+            generator.emit("    cmp rax, 0\n", type="text")
+            generator.emit(f"    je {end_label}\n", type="text")
+
+            for stmt in self.node.body:
+                CodeGenerator(stmt, generator).push()
+
+            generator.emit(f"    jmp {loop_label}\n", type="text")
+            generator.emit(f"{end_label}:\n", type="text")
+
+        elif isinstance(self.node, statements.Inc):
+            CodeGenerator.get_expr_value(self.node.value, generator)
+            generator.emit(f"    add [{self.node.variable}], rax\n", type="text")
+
+        elif isinstance(self.node, statements.Update):
+            CodeGenerator.get_expr_value(self.node.value, generator)
+            generator.emit(f"    mov [{self.node.variable}], rax\n", type="text")
+
+        elif isinstance(self.node, statements.Dbgstmt):
+            pass
 
         else:
             print(f"Error: Unsupported statement type '{type(self.node).__name__}'")
