@@ -1,12 +1,18 @@
 from . import expressions
 from . import statements
-import sys
+
+class ParseError(Exception):
+    def __init__(self, message, pos=None, token=None):
+        self.pos = pos
+        self.token = token
+        super().__init__(message)
 
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
-    
+        self.errors = []
+
     def peek(self):
         if self.pos >= len(self.tokens):
             return None
@@ -17,17 +23,55 @@ class Parser:
         self.pos += 1
         return token
 
+    def _context_snippet(self):
+        start = max(0, self.pos - 2)
+        end = min(len(self.tokens), self.pos + 3)
+        snippet = self.tokens[start:end]
+        marked = []
+        for i, t in enumerate(snippet):
+            marked.append(f">>>{t}<<<" if (start + i) == self.pos else t)
+        return " ".join(marked)
+
+    def _error(self, message, hint=None):
+        token = self.peek()
+        context = self._context_snippet()
+        full = (
+            f"\n[ParseError] at position {self.pos} (token: '{token}')\n"
+            f"  Context : {context}\n"
+            f"  Problem : {message}\n"
+        )
+        if hint:
+            full += f"  Fix     : {hint}\n"
+        self.errors.append(full)
+        print(full)
+        raise ParseError(full, pos=self.pos, token=token)
+
     def consume(self, expected):
         token = self.advance()
         if token != expected:
-            print(f"Syntax Error: Expected '{expected}', got '{token}'")
-            sys.exit(1)
+            self._error(
+                f"Expected '{expected}', got '{token}'",
+                hint=f"Insert '{expected}' before '{token}' at position {self.pos - 1}."
+            )
 
     def parse_program(self):
         stmts = []
         while self.peek() is not None:
-            stmts.append(self.parse_statement())
+            try:
+                stmts.append(self.parse_statement())
+            except ParseError:
+                self._sync()
         return stmts
+
+    def _sync(self):
+        sync_tokens = {"exit", "let", "func", "return", "call", "log", "if", "while", "inc", "update", "struct", "#"}
+        while self.peek() is not None:
+            if self.peek() == ";":
+                self.advance()
+                return
+            if self.peek() in sync_tokens:
+                return
+            self.advance()
 
     def parse_statement(self):
         token = self.peek()
@@ -56,9 +100,11 @@ class Parser:
             return self.parse_update()
         elif token == "struct":
             return self.parse_struct()
-        
-        print(f"Syntax Error: Unknown statement '{token}'")
-        sys.exit(1)
+
+        self._error(
+            f"Unknown statement keyword '{token}'",
+            hint=f"Valid statements: exit, let, func, return, call, log, if, while, inc, update, struct, #."
+        )
 
     def parse_lvalue(self):
         name = self.advance()
@@ -84,15 +130,11 @@ class Parser:
 
         while True:
             op = self.peek()
-
             if op not in expressions.BinaryopExpr.BINDING_POWER:
                 break
-
             lbp, rbp = expressions.BinaryopExpr.BINDING_POWER[op]
-
             if lbp < min_bp:
                 break
-
             self.advance()
             right = self.parse_expr(rbp)
             left = expressions.BinaryopExpr(left, op, right)
@@ -103,8 +145,10 @@ class Parser:
         token = self.peek()
 
         if token is None:
-            print("Syntax Error: Unexpected end of input")
-            sys.exit(1)
+            self._error(
+                "Unexpected end of input while parsing expression",
+                hint="Check for unclosed parentheses, missing operands, or a trailing operator."
+            )
 
         if token == "(":
             self.consume("(")
@@ -115,11 +159,11 @@ class Parser:
         if token.isdigit():
             self.advance()
             return expressions.NumberExpr(token)
-    
+
         if token.startswith('"') or token.startswith("'"):
             self.advance()
             return expressions.StringExpr(token[1:-1])
-        
+
         if token == "true":
             self.advance()
             return expressions.BoolExpr(True)
@@ -137,7 +181,7 @@ class Parser:
                     elements.append(self.parse_expr())
             self.consume("]")
             return expressions.ArrayExpr(elements)
-        
+
         if token.isidentifier():
             name = self.advance()
 
@@ -165,16 +209,18 @@ class Parser:
 
             return expressions.VariableExpr(name)
 
-        print(f"Syntax Error: Unexpected token '{token}'")
-        sys.exit(1)
-    
+        self._error(
+            f"Unexpected token '{token}' in expression",
+            hint="Expected a number, string, boolean, identifier, '(', or '[' to begin an expression."
+        )
+
     def parse_exit(self):
         self.consume("exit")
         self.consume(",")
         value = self.parse_expr()
         self.consume(";")
         return statements.Exit(value)
-    
+
     def parse_func(self):
         self.consume("func")
         name = self.advance()
@@ -193,13 +239,15 @@ class Parser:
 
         while self.peek() != "}":
             if self.peek() is None:
-                print(f"Syntax Error: Unclosed '{{' in function '{name}'")
-                sys.exit(1)
+                self._error(
+                    f"Unclosed '{{' in function '{name}'",
+                    hint=f"Add a closing '}}' to end the body of function '{name}'."
+                )
             body.append(self.parse_statement())
-        
+
         self.consume("}")
         return statements.DefFunc(name, parameters, body)
-    
+
     def parse_let(self):
         self.consume("let")
         name = self.advance()
@@ -207,13 +255,13 @@ class Parser:
         value = self.parse_expr()
         self.consume(";")
         return statements.Let(name, value)
-    
+
     def parse_return(self):
         self.consume("return")
         value = self.parse_expr()
         self.consume(";")
         return statements.Return(value)
-    
+
     def parse_call(self):
         self.consume("call")
         name = self.advance()
@@ -229,13 +277,13 @@ class Parser:
         self.consume(")")
         self.consume(";")
         return statements.Call(name, parameters)
-    
+
     def parse_log(self):
         self.consume("log")
         value = self.parse_expr()
         self.consume(";")
         return statements.Log(value)
-    
+
     def parse_if(self):
         self.consume("if")
         self.consume("(")
@@ -246,11 +294,14 @@ class Parser:
         then_branch = []
         while self.peek() != "}":
             if self.peek() is None:
-                print("Syntax Error: Unclosed '{' in if statement")
-                sys.exit(1)
+                self._error(
+                    "Unclosed '{' in if statement",
+                    hint="Add a closing '}' to end the if body."
+                )
             then_branch.append(self.parse_statement())
 
         self.consume("}")
+
         if self.peek() == "else":
             self.consume("else")
             if self.peek() == "if":
@@ -262,13 +313,16 @@ class Parser:
             else_branch = []
             while self.peek() != "}":
                 if self.peek() is None:
-                    print("Syntax Error: Unclosed '{' in else statement")
-                    sys.exit(1)
+                    self._error(
+                        "Unclosed '{' in else statement",
+                        hint="Add a closing '}' to end the else body."
+                    )
                 else_branch.append(self.parse_statement())
             self.consume("}")
             stmt = statements.If(condition, then_branch)
             stmt.else_branch = else_branch
             return stmt
+
         return statements.If(condition, then_branch)
 
     def parse_dbgstmt(self):
@@ -287,8 +341,10 @@ class Parser:
         body = []
         while self.peek() != "}":
             if self.peek() is None:
-                print("Syntax Error: Unclosed '{' in while statement")
-                sys.exit(1)
+                self._error(
+                    "Unclosed '{' in while statement",
+                    hint="Add a closing '}' to end the while body."
+                )
             body.append(self.parse_statement())
 
         self.consume("}")
@@ -315,7 +371,7 @@ class Parser:
             return statements.StructFieldUpdate(struct_name, field_name, value)
 
         return statements.Update(variable, value)
-    
+
     def parse_struct(self):
         self.consume("struct")
         name = self.advance()
@@ -324,8 +380,10 @@ class Parser:
 
         while self.peek() != "}":
             if self.peek() is None:
-                print("Syntax Error: Unclosed '{' in struct definition")
-                sys.exit(1)
+                self._error(
+                    f"Unclosed '{{' in struct definition '{name}'",
+                    hint=f"Add a closing '}}' to end the struct '{name}'."
+                )
             field = self.advance()
             self.consume(";")
             fields.append(field)

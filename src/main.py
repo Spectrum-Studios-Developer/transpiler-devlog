@@ -142,12 +142,12 @@ if __name__ == "__main__":
     - inc (increment variable by value)
     - update (set variable to value)
 7 arrays - DONE
-8 structs - 
-9 methods on structs
-10 pointers to structs:
+8 structs - DONE
+9 methods on structs - Not needed, can be done with functions that take struct as parameter
+10 pointers to structs: - Not needed, will be added in the future with a low level memory management system update
     let p = &myStruct
     p->health = 10
-11 for loops
+11 for loops - Can be done with while loops and inc statements, but will be added in the future for better readability and performance
 12 literal strings
 13 backend libraries
     # network:
