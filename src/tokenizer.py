@@ -7,7 +7,7 @@ TOKEN_SPEC = [
     ("COMMENT", r"//.*"),
     
     # multi-char operators (ALWAYS before single char)
-    ("OP", r"==|!=|<=|>=|->|\+\+|--|\+=|-=|\*=|/="),
+    ("OP", r"==|!=|<=|>=|->|\+\+|--|\+=|-=|\*=|/=|&&|\|\|"),
 
     # numbers
     ("FLOAT", r"\d+\.\d+"),
