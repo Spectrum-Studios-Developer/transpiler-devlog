@@ -1,1 +1,3 @@
-    let var = "string here";
+let var = "string here";
+
+exit var;
