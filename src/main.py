@@ -23,7 +23,6 @@ base_folder = None
 input_path = None
 build_path = None
 
-
 class FileUtils:
     @staticmethod
     def init():
@@ -83,7 +82,6 @@ class Generator:
         else:
             print(f"Error: Unsupported build version '{version}'")
 
-
 def resolve_build_config():
     global build_version, build_extension, cwd, base_folder, input_path, build_path
     
@@ -104,10 +102,6 @@ def resolve_build_config():
     base_folder = os.path.basename(cwd)
     input_path = os.path.join(cwd, sys.argv[1] if len(sys.argv) > 1 else "input.plang")
     build_path = os.path.join(cwd, "build", f"{base_folder}.{build_extension}")
-    
-    print(f"DEBUG build_path = {build_path}")
-    print(f"DEBUG sys.modules['main'].build_path = {sys.modules['main'].build_path}")
-
 
 def main():
     resolve_build_config()
@@ -135,10 +129,8 @@ def main():
 
     generator.build(build_version)
 
-
 if __name__ == "__main__":
     main()
-
 
 '''
 1 else -> else if  - DONE

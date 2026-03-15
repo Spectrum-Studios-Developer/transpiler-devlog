@@ -1,6 +1,5 @@
 from . import expressions
 from . import statements
-import generator.py.py as CodeGenerator
 import sys
 
 class Parser:
