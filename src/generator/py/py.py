@@ -109,7 +109,7 @@ class CodeGenerator:
                     node.push()
                 self.generator.indent_pop()
 
-        elif isinstance(self.node, statements.dbgstmt):
+        elif isinstance(self.node, statements.Dbgstmt):
             print(self.node.cmd)
             if self.node.cmd == "exitcode":
                 std.exitdbg = True
@@ -129,3 +129,8 @@ class CodeGenerator:
             variable = self.node.variable
             value = CodeGenerator.get_expr_value(self.node.value)
             self.generator.emit(f"{variable} += {value}\n")
+        
+        elif isinstance(self.node, statements.Update):
+            variable = self.node.variable
+            value = CodeGenerator.get_expr_value(self.node.value)
+            self.generator.emit(f"{variable} = {value}\n")

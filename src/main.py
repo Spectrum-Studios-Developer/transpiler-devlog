@@ -20,6 +20,11 @@ build_version = sys.argv[2] if len(sys.argv) > 2 else "python"
 if build_version not in ["python", "x86-64"]:
     print(f"Error: Unsupported build version '{build_version}'")
     sys.exit(1)
+if build_version == "x86-64":
+    print('Warning: Building for x86-64 is currently in early stages and may not support all features or generate fully optimized code.')
+    print("Do you wish to succeed anyway? (y/n)")
+    if input().lower() != "y":
+        sys.exit(0)
 build_extension = "py" if build_version == "python" else "asm" if build_version == "x86-64" else sys.exit(1)
 
 cwd = os.getcwd()

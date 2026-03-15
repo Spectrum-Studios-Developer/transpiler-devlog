@@ -30,6 +30,9 @@ class Parser:
             stmts.append(self.parse_statement())
         return stmts
     
+
+
+
     def parse_statement(self):
         token = self.peek()
 
@@ -53,9 +56,16 @@ class Parser:
             return self.parse_while()
         elif token == "inc":
             return self.parse_inc()
-
+        elif token == "update":
+            return self.parse_update()
+        
         print(f"Syntax Error: Unknown statement '{token}'")
         sys.exit(1)
+
+
+
+
+
 
     def parse_expr(self, min_bp=0):
         left = self.parse_primary()
@@ -127,6 +137,7 @@ class Parser:
     
     def parse_exit(self):
         self.consume("exit")
+        self.consume(",")
         value = self.parse_expr()
         self.consume(";")
         return statements.Exit(value)
@@ -159,7 +170,7 @@ class Parser:
     def parse_let(self):
         self.consume("let")
         name = self.advance()
-        self.consume("=")
+        self.consume(",")
         value = self.parse_expr()
         self.consume(";")
         return statements.Let(name, value)
@@ -231,7 +242,7 @@ class Parser:
         self.consume("#")
         cmd = self.advance()
         self.consume(";")
-        return statements.dbgstmt(cmd)
+        return statements.Dbgstmt(cmd)
 
     def parse_while(self):
         self.consume("while")
@@ -257,3 +268,12 @@ class Parser:
         value = self.parse_expr()
         self.consume(";")
         return statements.Inc(variable, value)
+    
+    def parse_update(self):
+        self.consume("update")
+        variable = self.advance()
+        self.consume(",")
+        value = self.parse_expr()
+        self.consume(";")
+        return statements.Update(variable, value)
+    

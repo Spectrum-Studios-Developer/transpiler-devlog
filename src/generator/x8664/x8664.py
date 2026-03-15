@@ -4,6 +4,10 @@ import parser.expressions as expressions
 import parser.statements as statements
 import main
 
+'''
+THIS IS A WORK IN PROGRESS AND NOT ALL FEATURES MAY BE SUPPORTED OR FULLY FUNCTIONAL. EXPECT BUGS AND INCOMPLETE CODE GENERATION, 
+ESPECIALLY FOR COMPLEX CONSTRUCTS. USE WITH CAUTION AND TEST THOROUGHLY. FEEL FREE TO CONTRIBUTE OR REPORT ISSUES TO HELP IMPROVE THE X86-64 BACKEND.
+'''
 
 class CodeGenerator:
     def __init__(self, node, generator):

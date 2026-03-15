@@ -33,7 +33,7 @@ class If:
         self.then_branch = then_branch
         self.else_branch = else_branch
 
-class dbgstmt:
+class Dbgstmt:
     def __init__(self, cmd):
         self.cmd = cmd
 
@@ -44,5 +44,10 @@ class While:
 
 class Inc:
     def __init__(self, variable, value=1):
+        self.variable = variable
+        self.value = value
+
+class Update:
+    def __init__(self, variable, value):
         self.variable = variable
         self.value = value
